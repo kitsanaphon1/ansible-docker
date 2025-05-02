@@ -12,25 +12,17 @@ pipeline {
             }
         }
 
-        stage('Build Ansible Docker Image') {
-            steps {
-                sh 'docker build -t ansible-azure .'
-            }
-        }
-
         stage('Run Ansible in Docker') {
             steps {
                 script {
                     writeFile file: 'azure_creds.json', text: "${AZ_CREDS}"
+                    def creds = readJSON file: 'azure_creds.json'
+                    env.AZURE_SUBSCRIPTION_ID = creds.subscriptionId
+                    env.AZURE_CLIENT_ID = creds.clientId
+                    env.AZURE_SECRET = creds.clientSecret
+                    env.AZURE_TENANT = creds.tenantId
                 }
                 sh '''
-                    apt-get update && apt-get install -y jq || true
-
-                    export AZURE_SUBSCRIPTION_ID=$(jq -r .subscriptionId azure_creds.json)
-                    export AZURE_CLIENT_ID=$(jq -r .clientId azure_creds.json)
-                    export AZURE_SECRET=$(jq -r .clientSecret azure_creds.json)
-                    export AZURE_TENANT=$(jq -r .tenantId azure_creds.json)
-
                     docker run --rm \
                       -v $(pwd):/ansible \
                       -v ~/.ssh:/root/.ssh:ro \
