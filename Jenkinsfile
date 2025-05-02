@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'test', url: 'https://github.com/kitsanaphon1/ansible-test-docker.git'
+                git branch: 'test', url: 'https://github.com/kitsanaphon1/ansible-docker.git'
             }
         }
 
