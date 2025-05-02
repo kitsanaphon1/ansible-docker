@@ -2,13 +2,19 @@ pipeline {
     agent any
 
     environment {
-        AZ_CREDS = credentials('azure-service-principal')  // ต้องสร้างใน Jenkins Credentials แบบ Secret Text (JSON)
+        AZ_CREDS = credentials('azure-service-principal')
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'test', url: 'https://github.com/kitsanaphon1/ansible-docker.git'
+                git branch: 'main', url: 'https://github.com/your/repo.git'
+            }
+        }
+
+        stage('Build Ansible Docker Image') {
+            steps {
+                sh 'docker build -t ansible-azure .'
             }
         }
 
@@ -18,13 +24,20 @@ pipeline {
                     writeFile file: 'azure_creds.json', text: "${AZ_CREDS}"
                 }
                 sh '''
+                    apt-get update && apt-get install -y jq || true
+
+                    export AZURE_SUBSCRIPTION_ID=$(jq -r .subscriptionId azure_creds.json)
+                    export AZURE_CLIENT_ID=$(jq -r .clientId azure_creds.json)
+                    export AZURE_SECRET=$(jq -r .clientSecret azure_creds.json)
+                    export AZURE_TENANT=$(jq -r .tenantId azure_creds.json)
+
                     docker run --rm \
                       -v $(pwd):/ansible \
                       -v ~/.ssh:/root/.ssh:ro \
-                      -e AZURE_SUBSCRIPTION_ID=$(jq -r .subscriptionId azure_creds.json) \
-                      -e AZURE_CLIENT_ID=$(jq -r .clientId azure_creds.json) \
-                      -e AZURE_SECRET=$(jq -r .clientSecret azure_creds.json) \
-                      -e AZURE_TENANT=$(jq -r .tenantId azure_creds.json) \
+                      -e AZURE_SUBSCRIPTION_ID \
+                      -e AZURE_CLIENT_ID \
+                      -e AZURE_SECRET \
+                      -e AZURE_TENANT \
                       ansible-azure \
                       ansible-playbook create-vm.yml
                 '''
