@@ -1,0 +1,58 @@
+---
+- name: Create a basic Ubuntu VM on Azure
+  hosts: localhost
+  connection: local
+  vars:
+    resource_group: myResourceGroup
+    location: East US
+    vm_name: myVM
+    admin_user: azureuser
+    admin_password: "MyP@ssword1234"  # ควรใช้ vault หรือ environment แทนถ้าใช้จริง
+
+  tasks:
+
+    - name: Create resource group
+      azure_rm_resourcegroup:
+        name: "{{ resource_group }}"
+        location: "{{ location }}"
+
+    - name: Create virtual network
+      azure_rm_virtualnetwork:
+        resource_group: "{{ resource_group }}"
+        name: myVnet
+        address_prefixes: "10.0.0.0/16"
+
+    - name: Create subnet
+      azure_rm_subnet:
+        resource_group: "{{ resource_group }}"
+        name: mySubnet
+        virtual_network_name: myVnet
+        address_prefix: "10.0.1.0/24"
+
+    - name: Create public IP address
+      azure_rm_publicipaddress:
+        resource_group: "{{ resource_group }}"
+        allocation_method: Static
+        name: myPublicIP
+
+    - name: Create network interface
+      azure_rm_networkinterface:
+        resource_group: "{{ resource_group }}"
+        name: myNIC
+        subnet_name: mySubnet
+        virtual_network_name: myVnet
+        public_ip_name: myPublicIP
+
+    - name: Create virtual machine
+      azure_rm_virtualmachine:
+        resource_group: "{{ resource_group }}"
+        name: "{{ vm_name }}"
+        vm_size: Standard_B1s
+        admin_username: "{{ admin_user }}"
+        admin_password: "{{ admin_password }}"
+        network_interfaces: myNIC
+        image:
+          offer: UbuntuServer
+          publisher: Canonical
+          sku: 20_04-lts
+          version: latest
